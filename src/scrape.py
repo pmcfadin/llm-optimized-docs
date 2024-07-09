@@ -52,13 +52,12 @@ def write_to_markdown(scraped_data, output_file):
 
 # Main script
 if __name__ == "__main__":
-    if len(sys.argv) != 4:
-        print("Usage: python scrape.py <base_url> <website_url> <output_file>")
+    if len(sys.argv) != 3:
+        print("Usage: python scrape.py <base_url> <output_file>")
         sys.exit(1)
 
     base_url = sys.argv[1]
-    website_url = sys.argv[2]
-    output_file = sys.argv[3]
+    output_file = sys.argv[2]
 
     # Ensure the output directory exists
     os.makedirs(os.path.dirname(output_file), exist_ok=True)
