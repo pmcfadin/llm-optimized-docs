@@ -6,9 +6,15 @@ import os
 
 # Function to fetch and parse HTML content
 def fetch_page(url):
-    response = requests.get(url)
-    response.raise_for_status()  # Raise an exception for HTTP errors
-    return BeautifulSoup(response.text, 'html.parser')
+    try:
+        response = requests.get(url)
+        response.raise_for_status()  # Raise an exception for HTTP errors
+        return BeautifulSoup(response.text, 'html.parser')
+    except requests.exceptions.HTTPError as http_err:
+        print(f"HTTP error occurred: {http_err}")
+    except requests.exceptions.RequestException as err:
+        print(f"An error occurred: {err}")
+    return None
 
 # Function to extract all child links from a page
 def get_child_links(base_url, soup):
@@ -32,6 +38,10 @@ def scrape_website(base_url):
         print(f"Scraping: {url}")
 
         soup = fetch_page(url)
+        if soup is None:
+            print(f"Failed to scrape: {url}")
+            return
+
         page_content = soup.get_text(separator=' ', strip=True)
         scraped_data[url] = page_content
 
