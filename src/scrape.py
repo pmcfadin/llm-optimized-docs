@@ -1,6 +1,8 @@
 import requests
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin
+import sys
+import os
 
 # Function to fetch and parse HTML content
 def fetch_page(url):
@@ -40,11 +42,25 @@ def scrape_website(base_url):
     scrape_page(base_url)
     return scraped_data
 
+def write_to_markdown(scraped_data, output_file):
+    with open(output_file, 'w', encoding='utf-8') as f:
+        for url, content in scraped_data.items():
+            f.write(f"# {url}\n\n")
+            f.write(f"{content[:200]}...\n\n")  # Write first 200 chars of content for brevity
+            f.write("---\n\n")  # Add a horizontal rule between entries
+    print(f"Markdown file created: {output_file}")
+
 # Main script
 if __name__ == "__main__":
-    website_url = 'http://example.com'  # Replace with your target website URL
+    if len(sys.argv) != 3:
+        print("Usage: python scrape.py <website_url> <output_file>")
+        sys.exit(1)
+
+    website_url = sys.argv[1]
+    output_file = sys.argv[2]
+
+    # Ensure the output directory exists
+    os.makedirs(os.path.dirname(output_file), exist_ok=True)
+
     scraped_data = scrape_website(website_url)
-    
-    # Print scraped data (or process it as needed)
-    for url, content in scraped_data.items():
-        print(f"URL: {url}\nContent: {content[:200]}...\n")  # Print first 200 chars of content for brevity
+    write_to_markdown(scraped_data, output_file)
