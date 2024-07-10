@@ -4,10 +4,14 @@ from urllib.parse import urljoin
 import sys
 import os
 
+headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.0.0 Safari/537.36'}
+
 # Function to fetch and parse HTML content
 def fetch_page(url):
+    print(f"Fetching: {url}")
+    
     try:
-        response = requests.get(url)
+        response = requests.get(url, headers=headers)
         response.raise_for_status()  # Raise an exception for HTTP errors
         return BeautifulSoup(response.text, 'html.parser')
     except requests.exceptions.HTTPError as http_err:
@@ -56,7 +60,7 @@ def write_to_markdown(scraped_data, output_file):
     with open(output_file, 'w', encoding='utf-8') as f:
         for url, content in scraped_data.items():
             f.write(f"# {url}\n\n")
-            f.write(f"{content[:200]}...\n\n")  # Write first 200 chars of content for brevity
+            f.write(f"{content}...\n\n")  # Write first 200 chars of content for brevity
             f.write("---\n\n")  # Add a horizontal rule between entries
     print(f"Markdown file created: {output_file}")
 
