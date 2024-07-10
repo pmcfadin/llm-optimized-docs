@@ -97,9 +97,9 @@ def scrape_website(base_url):
 def write_to_markdown(scraped_data, output_file):
     with open(output_file, 'w', encoding='utf-8') as f:
         for url, content in scraped_data.items():
-            f.write(f"# {content.split('\n', 1)[0]}\n\n")
+            f.write(f"# {content.split('\\n', 1)[0]}\n\n")
             f.write(f"Source: {url}\n\n")
-            f.write(content.split('\n', 1)[1] if '\n' in content else content)
+            f.write(content.split('\\n', 1)[1] if '\\n' in content else content)
             f.write("\n\n")
     print(f"Markdown file created: {output_file}")
 
