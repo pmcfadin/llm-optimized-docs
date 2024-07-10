@@ -3,6 +3,7 @@ from bs4 import BeautifulSoup
 from urllib.parse import urljoin
 import sys
 import os
+import re
 
 headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.0.0 Safari/537.36'}
 
@@ -30,6 +31,29 @@ def get_child_links(base_url, soup):
             links.append(full_link)
     return links
 
+# Function to clean and structure content
+def clean_content(soup):
+    # Remove script and style elements
+    for script in soup(["script", "style"]):
+        script.decompose()
+
+    # Extract main content
+    main_content = soup.find('main')
+    if main_content:
+        text = main_content.get_text(separator='\n', strip=True)
+    else:
+        text = soup.get_text(separator='\n', strip=True)
+
+    # Clean up the text
+    lines = (line.strip() for line in text.splitlines())
+    chunks = (phrase.strip() for line in lines for phrase in line.split("  "))
+    text = '\n'.join(chunk for chunk in chunks if chunk)
+
+    # Remove redundant newlines
+    text = re.sub(r'\n+', '\n', text)
+
+    return text
+
 # Function to scrape a page and its child pages
 def scrape_website(base_url):
     scraped_data = {}
@@ -46,7 +70,7 @@ def scrape_website(base_url):
             print(f"Failed to scrape: {url}")
             return
 
-        page_content = soup.get_text(separator=' ', strip=True)
+        page_content = clean_content(soup)
         scraped_data[url] = page_content
 
         child_links = get_child_links(base_url, soup)
@@ -60,7 +84,17 @@ def write_to_markdown(scraped_data, output_file):
     with open(output_file, 'w', encoding='utf-8') as f:
         for url, content in scraped_data.items():
             f.write(f"# {url}\n\n")
-            f.write(f"{content}...\n\n")  # Write first 200 chars of content for brevity
+            
+            # Split content into paragraphs
+            paragraphs = content.split('\n')
+            
+            # Write each paragraph, limiting to first 5 for brevity
+            for para in paragraphs[:5]:
+                f.write(f"{para}\n\n")
+            
+            if len(paragraphs) > 5:
+                f.write("...\n\n")  # Indicate there's more content
+            
             f.write("---\n\n")  # Add a horizontal rule between entries
     print(f"Markdown file created: {output_file}")
 
