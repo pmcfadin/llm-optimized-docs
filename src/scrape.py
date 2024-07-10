@@ -97,11 +97,13 @@ def scrape_website(base_url):
 def write_to_markdown(scraped_data, output_file):
     with open(output_file, 'w', encoding='utf-8') as f:
         for url, content in scraped_data.items():
-            f.write(f"# {content.split('\\n', 1)[0]}\n\n")
-            f.write(f"Source: {url}\n\n")
-            f.write(content.split('\\n', 1)[1] if '\\n' in content else content)
+            title = content.split('\n', 1)[0]
+            f.write("# {}\n\n".format(title))
+            f.write("Source: {}\n\n".format(url))
+            body = content.split('\n', 1)[1] if '\n' in content else content
+            f.write(body)
             f.write("\n\n")
-    print(f"Markdown file created: {output_file}")
+    print("Markdown file created: {}".format(output_file))
 
 # Function to remove duplicate content
 def remove_duplicates(scraped_data):
