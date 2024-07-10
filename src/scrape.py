@@ -39,18 +39,26 @@ def clean_content(soup):
 
     # Extract main content
     main_content = soup.find('main')
-    if main_content:
-        text = main_content.get_text(separator='\n', strip=True)
-    else:
-        text = soup.get_text(separator='\n', strip=True)
+    if not main_content:
+        main_content = soup
 
-    # Clean up the text
-    lines = (line.strip() for line in text.splitlines())
-    chunks = (phrase.strip() for line in lines for phrase in line.split("  "))
-    text = '\n'.join(chunk for chunk in chunks if chunk)
+    # Extract headers and their content
+    content = []
+    for header in main_content.find_all(['h1', 'h2', 'h3', 'h4', 'h5', 'h6']):
+        header_text = header.get_text(strip=True)
+        content.append(f"{'#' * int(header.name[1:])} {header_text}")
+        
+        next_element = header.find_next_sibling()
+        while next_element and next_element.name not in ['h1', 'h2', 'h3', 'h4', 'h5', 'h6']:
+            if next_element.name in ['p', 'ul', 'ol']:
+                content.append(next_element.get_text(separator='\n', strip=True))
+            next_element = next_element.find_next_sibling()
+
+    # Join content with double newlines for readability
+    text = '\n\n'.join(content)
 
     # Remove redundant newlines
-    text = re.sub(r'\n+', '\n', text)
+    text = re.sub(r'\n{3,}', '\n\n', text)
 
     return text
 
@@ -84,18 +92,8 @@ def write_to_markdown(scraped_data, output_file):
     with open(output_file, 'w', encoding='utf-8') as f:
         for url, content in scraped_data.items():
             f.write(f"# {url}\n\n")
-            
-            # Split content into paragraphs
-            paragraphs = content.split('\n')
-            
-            # Write each paragraph, limiting to first 5 for brevity
-            for para in paragraphs[:5]:
-                f.write(f"{para}\n\n")
-            
-            if len(paragraphs) > 5:
-                f.write("...\n\n")  # Indicate there's more content
-            
-            f.write("---\n\n")  # Add a horizontal rule between entries
+            f.write(content)
+            f.write("\n\n---\n\n")  # Add a horizontal rule between entries
     print(f"Markdown file created: {output_file}")
 
 # Main script
