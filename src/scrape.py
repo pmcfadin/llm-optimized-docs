@@ -44,21 +44,26 @@ def clean_content(soup):
 
     # Extract headers and their content
     content = []
-    for header in main_content.find_all(['h1', 'h2', 'h3', 'h4', 'h5', 'h6']):
-        header_text = header.get_text(strip=True)
-        content.append(f"{'#' * int(header.name[1:])} {header_text}")
-        
-        next_element = header.find_next_sibling()
-        while next_element and next_element.name not in ['h1', 'h2', 'h3', 'h4', 'h5', 'h6']:
-            if next_element.name in ['p', 'ul', 'ol']:
-                content.append(next_element.get_text(separator='\n', strip=True))
-            next_element = next_element.find_next_sibling()
+    for element in main_content.find_all(['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'ul', 'ol', 'pre', 'code']):
+        if element.name.startswith('h'):
+            header_level = int(element.name[1])
+            header_text = element.get_text(strip=True)
+            content.append(f"{'#' * header_level} {header_text}")
+        elif element.name == 'p':
+            content.append(element.get_text(strip=True))
+        elif element.name in ['ul', 'ol']:
+            list_items = [f"- {li.get_text(strip=True)}" for li in element.find_all('li')]
+            content.append('\n'.join(list_items))
+        elif element.name in ['pre', 'code']:
+            code_content = element.get_text(strip=True)
+            content.append(f"```\n{code_content}\n```")
 
     # Join content with double newlines for readability
     text = '\n\n'.join(content)
 
-    # Remove redundant newlines
+    # Remove redundant newlines and spaces
     text = re.sub(r'\n{3,}', '\n\n', text)
+    text = re.sub(r' {2,}', ' ', text)
 
     return text
 
@@ -96,6 +101,16 @@ def write_to_markdown(scraped_data, output_file):
             f.write("\n\n---\n\n")  # Add a horizontal rule between entries
     print(f"Markdown file created: {output_file}")
 
+# Function to remove duplicate content
+def remove_duplicates(scraped_data):
+    seen_content = set()
+    unique_data = {}
+    for url, content in scraped_data.items():
+        if content not in seen_content:
+            seen_content.add(content)
+            unique_data[url] = content
+    return unique_data
+
 # Main script
 if __name__ == "__main__":
     if len(sys.argv) != 3:
@@ -109,4 +124,5 @@ if __name__ == "__main__":
     os.makedirs(os.path.dirname(output_file), exist_ok=True)
 
     scraped_data = scrape_website(base_url)
-    write_to_markdown(scraped_data, output_file)
+    unique_data = remove_duplicates(scraped_data)
+    write_to_markdown(unique_data, output_file)
