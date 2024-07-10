@@ -4,6 +4,7 @@ from urllib.parse import urljoin
 import sys
 import os
 import re
+import openai
 
 headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.0.0 Safari/537.36'}
 
@@ -14,7 +15,7 @@ def fetch_page(url):
     try:
         response = requests.get(url, headers=headers)
         response.raise_for_status()  # Raise an exception for HTTP errors
-        return BeautifulSoup(response.text, 'html.parser')
+        return response.text
     except requests.exceptions.HTTPError as http_err:
         print(f"HTTP error occurred: {http_err}")
     except requests.exceptions.RequestException as err:
@@ -22,7 +23,8 @@ def fetch_page(url):
     return None
 
 # Function to extract all child links from a page
-def get_child_links(base_url, soup):
+def get_child_links(base_url, html):
+    soup = BeautifulSoup(html, 'html.parser')
     links = []
     for a_tag in soup.find_all('a', href=True):
         link = a_tag['href']
@@ -31,42 +33,38 @@ def get_child_links(base_url, soup):
             links.append(full_link)
     return links
 
-# Function to clean and structure content
-def clean_content(soup):
-    # Remove script and style elements
-    for script in soup(["script", "style"]):
-        script.decompose()
+# Function to convert HTML to Markdown using LLM
+def html_to_markdown(html):
+    prompt = """
+    You are an expert HTML to Markdown converter. Your task is to convert the given HTML content into well-formatted Markdown, following these guidelines:
 
-    # Extract main content
-    main_content = soup.find('main')
-    if not main_content:
-        main_content = soup
+    1. Preserve the hierarchical structure of headings (h1, h2, h3, etc.).
+    2. Convert HTML lists (ul, ol) to proper Markdown lists.
+    3. Preserve code blocks and their language specifications if available.
+    4. Convert links to Markdown format, preserving both the link text and URL.
+    5. Convert tables to Markdown table format.
+    6. Preserve emphasis (bold, italic) using Markdown syntax.
+    7. Include any important images, converting them to Markdown image syntax and preserving alt text.
+    8. Omit any navigation elements, headers, footers, or sidebars that are not part of the main content.
+    9. Preserve any important notes, warnings, or callouts, formatting them distinctly in Markdown.
+    10. Ensure that the resulting Markdown is clean, readable, and properly spaced.
 
-    # Extract headers and their content
-    content = []
-    for element in main_content.find_all(['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'ul', 'ol', 'pre', 'code']):
-        if element.name.startswith('h'):
-            header_level = int(element.name[1])
-            header_text = element.get_text(strip=True)
-            content.append(f"{'#' * header_level} {header_text}")
-        elif element.name == 'p':
-            content.append(element.get_text(strip=True))
-        elif element.name in ['ul', 'ol']:
-            list_items = [f"- {li.get_text(strip=True)}" for li in element.find_all('li')]
-            content.append('\n'.join(list_items))
-        elif element.name in ['pre', 'code']:
-            code_content = element.get_text(strip=True)
-            lang = element.get('class', [''])[0] if element.get('class') else ''
-            content.append(f"```{lang}\n{code_content}\n```")
+    Here's the HTML content to convert:
 
-    # Join content with double newlines for readability
-    text = '\n\n'.join(content)
+    {html}
 
-    # Remove redundant newlines and spaces
-    text = re.sub(r'\n{3,}', '\n\n', text)
-    text = re.sub(r' {2,}', ' ', text)
+    Please provide the converted Markdown content.
+    """
 
-    return text
+    response = openai.ChatCompletion.create(
+        model="gpt-3.5-turbo",
+        messages=[
+            {"role": "system", "content": "You are a helpful assistant that converts HTML to Markdown."},
+            {"role": "user", "content": prompt.format(html=html)}
+        ]
+    )
+
+    return response.choices[0].message['content']
 
 # Function to scrape a page and its child pages
 def scrape_website(base_url):
@@ -79,15 +77,15 @@ def scrape_website(base_url):
         visited.add(url)
         print(f"Scraping: {url}")
 
-        soup = fetch_page(url)
-        if soup is None:
+        html = fetch_page(url)
+        if html is None:
             print(f"Failed to scrape: {url}")
             return
 
-        page_content = clean_content(soup)
-        scraped_data[url] = page_content
+        markdown_content = html_to_markdown(html)
+        scraped_data[url] = markdown_content
 
-        child_links = get_child_links(base_url, soup)
+        child_links = get_child_links(base_url, html)
         for link in child_links:
             scrape_page(link)
 
@@ -97,12 +95,9 @@ def scrape_website(base_url):
 def write_to_markdown(scraped_data, output_file):
     with open(output_file, 'w', encoding='utf-8') as f:
         for url, content in scraped_data.items():
-            title = content.split('\n', 1)[0]
-            f.write("# {}\n\n".format(title))
-            f.write("Source: {}\n\n".format(url))
-            body = content.split('\n', 1)[1] if '\n' in content else content
-            f.write(body)
-            f.write("\n\n")
+            f.write(f"Source: {url}\n\n")
+            f.write(content)
+            f.write("\n\n---\n\n")
     print("Markdown file created: {}".format(output_file))
 
 # Function to remove duplicate content
@@ -126,6 +121,9 @@ if __name__ == "__main__":
 
     # Ensure the output directory exists
     os.makedirs(os.path.dirname(output_file), exist_ok=True)
+
+    # Set up OpenAI API key
+    openai.api_key = os.getenv("OPENAI_API_KEY")
 
     scraped_data = scrape_website(base_url)
     unique_data = remove_duplicates(scraped_data)
