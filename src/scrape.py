@@ -16,13 +16,8 @@ def fetch_page(url):
         response = requests.get(url, headers=headers)
         response.raise_for_status()  # Raise an exception for HTTP errors
         return response.text
-    except requests.exceptions.HTTPError as http_err:
-        if response.status_code == 404:
-            print("Page not found bro!!!")
-        else:
-            print(f"HTTP error occurred: {http_err}")
     except requests.exceptions.RequestException as err:
-        print(f"An error occurred: {err}")
+        print(f"An error occurred while fetching the page: {err}")
     return None
 
 # Function to extract all child links from a page
