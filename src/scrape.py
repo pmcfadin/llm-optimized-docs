@@ -54,7 +54,7 @@ def html_to_markdown(html):
     """
 
     client = anthropic.Anthropic()
-    message = client.beta.messages.create(
+    message = client.messages.create(
         model="claude-3-sonnet-20240620",
         max_tokens=4000,
         messages=[
