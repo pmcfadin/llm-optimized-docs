@@ -55,7 +55,7 @@ def html_to_markdown(html):
 
     client = anthropic.Anthropic()
     message = client.messages.create(
-        model="claude-3-sonnet-20240620",
+        model="claude-3-5-sonnet-20240620",
         max_tokens=4000,
         system="You are a helpful assistant that converts HTML to Markdown.",
         messages=[
@@ -84,9 +84,9 @@ def scrape_website(base_url):
         markdown_content = html_to_markdown(html)
         scraped_data[url] = markdown_content
 
-        child_links = get_child_links(base_url, html)
-        for link in child_links:
-            scrape_page(link)
+        #child_links = get_child_links(base_url, html)
+        #for link in child_links:
+        #    scrape_page(link)
 
     scrape_page(base_url)
     return scraped_data
