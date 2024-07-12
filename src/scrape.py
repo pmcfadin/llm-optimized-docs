@@ -3,7 +3,7 @@ from bs4 import BeautifulSoup
 from urllib.parse import urljoin
 import sys
 import os
-import openai
+import anthropic
 
 headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.0.0 Safari/537.36'}
 
@@ -53,15 +53,17 @@ def html_to_markdown(html):
     Please provide the converted Markdown content.
     """
 
-    response = openai.ChatCompletion.create(
-        model="gpt-3.5-turbo",
+    client = anthropic.Anthropic()
+    response = client.messages.create(
+        model="claude-3-sonnet-20240229",
+        max_tokens=4000,
         messages=[
             {"role": "system", "content": "You are a helpful assistant that converts HTML to Markdown."},
             {"role": "user", "content": prompt.format(html=html)}
         ]
     )
 
-    return response.choices[0].message['content']
+    return response.content[0].text
 
 # Function to scrape a page and its child pages
 def scrape_website(base_url):
@@ -119,8 +121,8 @@ if __name__ == "__main__":
     # Ensure the output directory exists
     os.makedirs(os.path.dirname(output_file), exist_ok=True)
 
-    # Set up OpenAI API key
-    openai.api_key = os.getenv("OPENAI_API_KEY")
+    # Set up Anthropic API key
+    anthropic.api_key = os.getenv("ANTHROPIC_API_KEY")
 
     scraped_data = scrape_website(base_url)
     unique_data = remove_duplicates(scraped_data)
