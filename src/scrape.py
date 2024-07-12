@@ -57,8 +57,8 @@ def html_to_markdown(html):
     message = client.messages.create(
         model="claude-3-sonnet-20240620",
         max_tokens=4000,
+        system="You are a helpful assistant that converts HTML to Markdown.",
         messages=[
-            {"role": "system", "content": "You are a helpful assistant that converts HTML to Markdown."},
             {"role": "user", "content": prompt.format(html=html)}
         ]
     )
